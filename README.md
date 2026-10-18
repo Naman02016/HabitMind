@@ -1,114 +1,77 @@
- HabitMind
+# 🌿 HabitMind
 
-Progress, Not Punishment.
+A full-stack personal productivity application that helps users build
+good habits, track unwanted habits, organize tasks, and keep notes in
+one place through a calm and simple interface.
 
-HabitMind is a personal productivity and self-improvement application
-designed to help users build positive habits, track unwanted habits,
-organize tasks, and keep important thoughts in one place. It combines
-habit tracking and personal organization in a calm, simple interface.
+------------------------------------------------------------------------
 
-🚀 Features
+## 🚀 Features
 
-📊 Overview Dashboard
+-   📊 Overview Dashboard
+-   🌱 Create & Track Good Habits
+-   🚫 Track Bad Habits with Daily Check-ins
+-   🔥 Monitor Habit Streaks
+-   📝 Create & Manage Custom Lists
+-   ✅ Add, Complete & Delete List Items
+-   📒 Create, Edit & Delete Notes
+-   🗄 PostgreSQL Database
+-   ⚡ FastAPI REST API
+-   ⚛ React + TypeScript Frontend
+-   🤖 AI Productivity Assistant *(Planned)*
 
-🌱 Create and Track Good Habits
+------------------------------------------------------------------------
 
-🚫 Track and Check In on Bad Habits
+## 🛠 Tech Stack
 
-🔥 Monitor Habit Streaks
+### Frontend
 
-📝 Create and Manage Custom Lists
+-   React
+-   TypeScript
+-   Vite
+-   Tailwind CSS
+-   React Router
+-   Lucide React
 
-✅ Add, Complete, Edit & Delete List Items
+### Backend
 
-📒 Create, Edit & Delete Notes
+-   Python
+-   FastAPI
+-   SQLAlchemy
+-   Pydantic
 
-💾 Persistent Data Storage with PostgreSQL
+### Database
 
-⚡ FastAPI REST API
+-   PostgreSQL
 
-⚛️ React + TypeScript Frontend
+### Development Tools
 
-🤖 AI Productivity Assistant (Planned)
+-   Git & GitHub
+-   Visual Studio Code
+-   pgAdmin
+-   Swagger UI
 
-🛠 Tech Stack
+------------------------------------------------------------------------
 
-Frontend
+## 📊 Habit Tracking & Productivity
 
-React
+The application currently supports:
 
-TypeScript
+-   Viewing habit information and progress on the overview dashboard
+-   Creating and managing good habits
+-   Recording check-ins for unwanted habits
+-   Tracking habit streak values
+-   Organizing tasks into custom lists
+-   Marking list items as completed
+-   Creating, editing, and deleting notes
+-   Saving lists, list items, and notes persistently in PostgreSQL
 
-Vite
+------------------------------------------------------------------------
 
-Tailwind CSS
+## 📂 Project Structure
 
-React Router
-
-Lucide React
-
-Backend
-
-Python
-
-FastAPI
-
-SQLAlchemy
-
-Pydantic
-
-Database
-
-PostgreSQL
-
-Development Tools
-
-Git & GitHub
-
-Visual Studio Code
-
-pgAdmin
-
-Swagger UI
-
-📊 Habit Tracking & Productivity
-
-HabitMind currently supports:
-
-Viewing habit information on the overview dashboard
-
-Creating and managing good habits
-
-Recording check-ins for unwanted habits
-
-Tracking habit streak values
-
-Organizing tasks into custom lists
-
-Marking list items as completed
-
-Saving notes and updating them later
-
-Persisting lists, items, and notes in PostgreSQL
-
-AI Assistant (Planned)
-
-The AI Assistant is a planned extension of HabitMind. Potential
-capabilities include:
-
-Personalized productivity suggestions
-
-Habit pattern analysis
-
-Help organizing tasks and priorities
-
-Summaries of notes and actionable ideas
-
-These AI features are not implemented yet.
-
-📂 Project Structure
-
-HabitMind/
+``` text
+HabitMind
 │
 ├── backend/
 │   └── app/
@@ -125,39 +88,34 @@ HabitMind/
 │       ├── services/
 │       └── App.tsx
 │
-├── .gitignore
-└── README.md
+├── screenshots/
+│
+├── README.md
+└── .gitignore
+```
 
-⚙ Installation
+------------------------------------------------------------------------
 
-Prerequisites
+## ⚙ Installation
 
-Make sure you have installed:
+### Backend
 
-Python
-
-Node.js and npm
-
-PostgreSQL
-
-Git
-
-Backend
-
-From the project root, navigate to the backend directory:
-
+``` bash
 cd backend
+```
 
-Activate your Python environment and install the dependencies listed in
-your backend dependency file, if one is present.
+Activate your Python environment and install the dependencies used by
+the project.
 
-Create a local .env file in the backend directory and configure your
-PostgreSQL connection using the DATABASE_URL environment variable.
-Make sure the habitmind database exists in PostgreSQL.
+Create a local `.env` file inside the `backend/` directory and configure
+your PostgreSQL connection using `DATABASE_URL`. Make sure the
+`habitmind` database exists before starting the server.
 
-Start the backend from the backend directory:
+Run the backend from the `backend/` directory:
 
+``` bash
 python -m uvicorn app.main:app --reload
+```
 
 The API will be available at:
 
@@ -167,39 +125,19 @@ Interactive API documentation:
 
 http://127.0.0.1:8000/docs
 
-Frontend
+### Frontend
 
-Open another terminal and navigate to the frontend directory from the
-project root:
-
+``` bash
 cd frontend
 
-Install the frontend dependencies and start the development server:
-
 npm install
+
 npm run dev
+```
 
-Open the local URL shown in the terminal by Vite.
+Open the local URL displayed by Vite in your terminal.
 
-🗄️ Database
-
-HabitMind uses PostgreSQL to persist application data. SQLAlchemy models
-and FastAPI endpoints are used to work with the database.
-
-The current database tables include:
-
-good_habits
-
-bad_habits
-
-custom_lists
-
-list_items
-
-notes
-
-Keep your local database credentials in backend/.env. Do not commit
-.env files or database passwords to GitHub.
+------------------------------------------------------------------------
 
 ## 📸 Screenshots
 
@@ -207,34 +145,56 @@ Keep your local database credentials in backend/.env. Do not commit
 
 ![Overview Dashboard](screenshots/overview.png)
 
+------------------------------------------------------------------------
+
 ### 🌱 Build Good Habits
 
 ![Good Habits](screenshots/good-habits.png)
+
+------------------------------------------------------------------------
 
 ### 🚫 Break Bad Habits
 
 ![Bad Habits](screenshots/bad-habits.png)
 
+------------------------------------------------------------------------
+
 ### 📝 Lists & Notes
 
 ![Lists & Notes](screenshots/lists-notes.png)
 
-🔮 Future Improvements
+------------------------------------------------------------------------
 
-AI-powered personal productivity assistant
+## 🤖 AI Assistant
 
-Personalized habit recommendations
+The AI Assistant is planned as the next major feature.
 
-Habit and behaviour pattern analysis
+Potential future capabilities include:
 
-More detailed progress analytics
+-   Personalized productivity suggestions
+-   Habit pattern analysis
+-   Assistance with task organization
+-   Summaries of notes and actionable ideas
 
-Additional insights into productivity trends
+*AI features are planned and are not implemented yet.*
 
-Further improvements to validation and error handling
+------------------------------------------------------------------------
 
-👨‍💻 Author
+## 🔮 Future Improvements
 
-Naman Goyal
+-   AI-powered personal productivity assistant
+-   Personalized habit recommendations
+-   Behaviour pattern analysis
+-   More detailed progress analytics
+-   Additional productivity insights
+-   Improved validation and error handling
 
-HabitMind --- Progress, not punishment.
+------------------------------------------------------------------------
+
+## 👨‍💻 Author
+
+**Naman Goyal**
+
+------------------------------------------------------------------------
+
+*HabitMind --- Progress, not punishment.*
