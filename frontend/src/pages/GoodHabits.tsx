@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, CheckCircle2, Circle, X } from 'lucide-react'
+import {
+  createHabit,
+  updateHabit,
+  deleteHabit,
+} from '../services/habitService'
 
 export type Habit = {
   id: number
@@ -19,7 +24,6 @@ function GoodHabits({ habits, setHabits }: GoodHabitsProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-
   function resetForm() {
     setName('')
     setDescription('')
@@ -27,36 +31,48 @@ function GoodHabits({ habits, setHabits }: GoodHabitsProps) {
     setShowForm(false)
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!name.trim()) return
 
-    if (editingId !== null) {
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) =>
-          habit.id === editingId
-            ? {
-                ...habit,
-                name: name.trim(),
-                description: description.trim(),
-              }
-            : habit,
-        ),
-      )
-    } else {
-      const newHabit: Habit = {
-        id: Date.now(),
-        name: name.trim(),
-        description: description.trim(),
-        streak: 0,
-        done: false,
+    try {
+      if (editingId !== null) {
+        const updatedHabit = await updateHabit(editingId, {
+          name: name.trim(),
+          description: description.trim(),
+        })
+
+        setHabits((currentHabits) =>
+          currentHabits.map((habit) =>
+            habit.id === editingId
+              ? {
+                  ...updatedHabit,
+                  description: updatedHabit.description ?? '',
+                }
+              : habit,
+          ),
+        )
+      } else {
+        const newHabit = await createHabit({
+          name: name.trim(),
+          description: description.trim(),
+        })
+
+        setHabits((currentHabits) => [
+          ...currentHabits,
+          {
+            ...newHabit,
+            description: newHabit.description ?? '',
+          },
+        ])
       }
 
-      setHabits((currentHabits) => [...currentHabits, newHabit])
+      resetForm()
+    } catch (error) {
+      console.error('Failed to save habit:', error)
+      window.alert('Could not save the habit. Please try again.')
     }
-
-    resetForm()
   }
 
   function handleEdit(habit: Habit) {
@@ -66,24 +82,49 @@ function GoodHabits({ habits, setHabits }: GoodHabitsProps) {
     setShowForm(true)
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
     const confirmed = window.confirm(
       'Are you sure you want to delete this habit?',
     )
 
     if (!confirmed) return
 
-    setHabits((currentHabits) =>
-      currentHabits.filter((habit) => habit.id !== id),
-    )
+    try {
+      await deleteHabit(id)
+
+      setHabits((currentHabits) =>
+        currentHabits.filter((habit) => habit.id !== id),
+      )
+    } catch (error) {
+      console.error('Failed to delete habit:', error)
+      window.alert('Could not delete the habit. Please try again.')
+    }
   }
 
-  function toggleHabit(id: number) {
-    setHabits((currentHabits) =>
-      currentHabits.map((habit) =>
-        habit.id === id ? { ...habit, done: !habit.done } : habit,
-      ),
-    )
+  async function toggleHabit(id: number) {
+    const habit = habits.find((item) => item.id === id)
+
+    if (!habit) return
+
+    try {
+      const updatedHabit = await updateHabit(id, {
+        done: !habit.done,
+      })
+
+      setHabits((currentHabits) =>
+        currentHabits.map((item) =>
+          item.id === id
+            ? {
+                ...updatedHabit,
+                description: updatedHabit.description ?? '',
+              }
+            : item,
+        ),
+      )
+    } catch (error) {
+      console.error('Failed to update habit:', error)
+      window.alert('Could not update the habit. Please try again.')
+    }
   }
 
   return (
@@ -201,10 +242,7 @@ function GoodHabits({ habits, setHabits }: GoodHabitsProps) {
 
       {habits.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#C9D2C2] bg-[#FFFDF8] px-6 py-12 text-center">
-          <CheckCircle2
-            size={32}
-            className="mx-auto text-[#52664B]"
-          />
+          <CheckCircle2 size={32} className="mx-auto text-[#52664B]" />
 
           <h3 className="mt-4 font-semibold">A fresh start</h3>
 

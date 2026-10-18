@@ -1,4 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  getBadHabits,
+  createBadHabit,
+  updateBadHabit,
+  deleteBadHabit,
+} from '../services/badHabitService'
 import {
   Plus,
   Pencil,
@@ -23,75 +29,126 @@ function BadHabits() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadHabits() {
+      try {
+        const data = await getBadHabits()
+        setHabits(
+          data.map((habit) => ({
+            ...habit,
+            description: habit.description ?? '',
+          })),
+        )
+      } catch (err) {
+        console.error('Failed to load bad habits:', err)
+        setError('Could not load your habits. Please check that the backend is running and try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadHabits()
+  }, [])
 
   function resetForm() {
     setName('')
     setDescription('')
     setEditingId(null)
     setShowForm(false)
+    setError('')
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!name.trim()) return
 
-    if (editingId !== null) {
-      setHabits((current) =>
-        current.map((habit) =>
-          habit.id === editingId
-            ? {
-                ...habit,
-                name: name.trim(),
-                description: description.trim(),
-              }
-            : habit,
-        ),
-      )
-    } else {
-      setHabits((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          name: name.trim(),
-          description: description.trim(),
-          streak: 0,
-          status: 'unconfirmed',
-        },
-      ])
-    }
+    setError('')
 
-    resetForm()
+    try {
+      if (editingId !== null) {
+        const updated = await updateBadHabit(editingId, {
+          name: name.trim(),
+          description: description.trim() || null,
+        })
+
+        setHabits((current) =>
+          current.map((habit) =>
+            habit.id === editingId
+              ? { ...updated, description: updated.description ?? '' }
+              : habit,
+          ),
+        )
+      } else {
+        const created = await createBadHabit({
+          name: name.trim(),
+          description: description.trim() || null,
+        })
+
+        setHabits((current) => [
+          ...current,
+          { ...created, description: created.description ?? '' },
+        ])
+      }
+
+      resetForm()
+    } catch (err) {
+      console.error('Failed to save bad habit:', err)
+      setError('Could not save this habit. Please try again.')
+    }
   }
 
   function handleEdit(habit: BadHabit) {
     setEditingId(habit.id)
     setName(habit.name)
     setDescription(habit.description)
+    setError('')
     setShowForm(true)
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
     if (!window.confirm('Are you sure you want to delete this habit?')) return
 
-    setHabits((current) => current.filter((habit) => habit.id !== id))
+    setError('')
+
+    try {
+      await deleteBadHabit(id)
+      setHabits((current) => current.filter((habit) => habit.id !== id))
+    } catch (err) {
+      console.error('Failed to delete bad habit:', err)
+      setError('Could not delete this habit. Please try again.')
+    }
   }
 
-  function updateStatus(id: number, status: 'avoided' | 'occurred') {
-    setHabits((current) =>
-      current.map((habit) => {
-        if (habit.id !== id) return habit
+  async function updateStatus(id: number, status: 'avoided' | 'occurred') {
+    const habit = habits.find((item) => item.id === id)
+    if (!habit) return
 
-        const streak =
-          status === 'avoided'
-            ? habit.status === 'avoided'
-              ? habit.streak
-              : habit.streak + 1
-            : 0
+    const streak =
+      status === 'avoided'
+        ? habit.status === 'avoided'
+          ? habit.streak
+          : habit.streak + 1
+        : 0
 
-        return { ...habit, status, streak }
-      }),
-    )
+    setError('')
+
+    try {
+      const updated = await updateBadHabit(id, { status, streak })
+      setHabits((current) =>
+        current.map((item) =>
+          item.id === id
+            ? { ...updated, description: updated.description ?? '' }
+            : item,
+        ),
+      )
+    } catch (err) {
+      console.error('Failed to update bad habit status:', err)
+      setError('Could not save your check-in. Please try again.')
+    }
   }
 
   return (
@@ -120,6 +177,16 @@ function BadHabits() {
           Add habit
         </button>
       </section>
+
+      {error && (
+        <div role="alert" className="mb-5 rounded-xl border border-[#E5BDB7] bg-[#F7E8E5] px-4 py-3 text-sm text-[#9A5148]">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <p className="mb-5 text-sm text-[#737B70]">Loading your habits...</p>
+      )}
 
       {showForm && (
         <section className="mb-6 rounded-2xl border border-[#E5E2D9] bg-[#FFFDF8] p-5">

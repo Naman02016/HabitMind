@@ -1,71 +1,53 @@
-import BadHabits from './pages/BadHabits'
-import ListsNotes from './pages/ListsNotes'
-import AIAssistant from './pages/AIAssistant'
-import { useState } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import AppLayout from './AppLayout'
+import { useEffect, useState } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import {
-  Activity,
   Brain,
   CheckCircle2,
   Circle,
-  Leaf,
-  ListTodo,
-  MessageCircle,
-  Settings,
-  Sparkles,
   StickyNote,
+  AlertCircle,
 } from 'lucide-react'
 
-const navigation = [
-  { name: 'Overview', icon: Activity },
-  { name: 'Build Good Habits', icon: CheckCircle2 },
-  { name: 'Break Bad Habits', icon: Leaf },
-  { name: 'Lists & Notes', icon: StickyNote },
-  { name: 'AI Assistant', icon: Brain },
-]
-
+import AppLayout from './AppLayout'
 import GoodHabits, { type Habit } from './pages/GoodHabits'
+import BadHabits from './pages/BadHabits'
+import ListsNotes from './pages/ListsNotes'
+import AIAssistant from './pages/AIAssistant'
+import { getHabits } from './services/habitService'
+import {
+  getBadHabits,
+  type BadHabit,
+} from './services/badHabitService'
 
-const initialHabits: Habit[] = [
-  {
-    id: 1,
-    name: 'Gym / Movement',
-    description: 'Take care of your body',
-    streak: 4,
-    done: true,
-  },
-  {
-    id: 2,
-    name: 'DSA Practice',
-    description: 'One problem at a time',
-    streak: 2,
-    done: false,
-  },
-  {
-    id: 3,
-    name: 'Read for 15 minutes',
-    description: 'Make space to learn',
-    streak: 6,
-    done: false,
-  },
-]
+function Overview({
+  habits,
+  badHabits,
+}: {
+  habits: Habit[]
+  badHabits: BadHabit[]
+}) {
+  const completedGoodHabits = habits.filter((habit) => habit.done).length
 
-function Overview({ habits }: { habits: Habit[] }) {
-  
+  const checkedBadHabits = badHabits.filter(
+    (habit) => habit.status === 'avoided' || habit.status === 'occurred',
+  ).length
 
-  const completedHabits = habits.filter((habit) => habit.done).length
-  const totalHabits = habits.length
+  const totalHabits = habits.length + badHabits.length
+  const completedHabits = completedGoodHabits + checkedBadHabits
 
   const progress =
     totalHabits === 0
       ? 0
       : Math.round((completedHabits / totalHabits) * 100)
 
+  // Include both good-habit and bad-habit streaks.
+  const allStreaks = [
+    ...habits.map((habit) => habit.streak),
+    ...badHabits.map((habit) => habit.streak),
+  ]
+
   const bestStreak =
-    habits.length === 0
-      ? 0
-      : Math.max(...habits.map((habit) => habit.streak))
+    allStreaks.length === 0 ? 0 : Math.max(...allStreaks)
 
   return (
     <div className="mx-auto max-w-6xl p-5 md:p-9">
@@ -122,7 +104,7 @@ function Overview({ habits }: { habits: Habit[] }) {
         </div>
       </section>
 
-      {/* Today's habits */}
+      {/* Today's good habits */}
       <section className="mb-8">
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Today's habits</h3>
@@ -132,41 +114,110 @@ function Overview({ habits }: { habits: Habit[] }) {
           </p>
         </div>
 
-        <div className="space-y-3">
-          {habits.map((habit) => (
-            <div
-              key={habit.id}
-              className="flex items-center gap-4 rounded-2xl border border-[#E5E2D9] bg-[#FFFDF8] p-4"
-            >
+        {habits.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#C9D2C2] bg-[#FFFDF8] p-6 text-sm text-[#737B70]">
+            No good habits added yet. Start with one small step.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {habits.map((habit) => (
               <div
-                className={
-                  habit.done
-                    ? 'text-[#52664B]'
-                    : 'text-[#A5AD9D]'
-                }
+                key={habit.id}
+                className="flex items-center gap-4 rounded-2xl border border-[#E5E2D9] bg-[#FFFDF8] p-4"
               >
-                {habit.done ? (
-                  <CheckCircle2 size={23} />
-                ) : (
-                  <Circle size={23} />
-                )}
-              </div>
+                <div
+                  className={
+                    habit.done
+                      ? 'text-[#52664B]'
+                      : 'text-[#A5AD9D]'
+                  }
+                >
+                  {habit.done ? (
+                    <CheckCircle2 size={23} />
+                  ) : (
+                    <Circle size={23} />
+                  )}
+                </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{habit.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{habit.name}</p>
 
-                <p className="mt-1 text-sm text-[#737B70]">
-                  {habit.description}
-                </p>
-              </div>
+                  <p className="mt-1 text-sm text-[#737B70]">
+                    {habit.description || 'No description added.'}
+                  </p>
+                </div>
 
-              <div className="hidden items-center gap-1 text-sm text-[#737B70] sm:flex">
-                <span>🔥</span>
-                <span>{habit.streak} days</span>
+                <div className="hidden items-center gap-1 text-sm text-[#737B70] sm:flex">
+                  <span>🔥</span>
+                  <span>{habit.streak} days</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Today's bad-habit check-ins */}
+      <section className="mb-8">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">
+            Today's bad-habit check-ins
+          </h3>
+
+          <p className="mt-1 text-sm text-[#737B70]">
+            Recognise your patterns without judging yourself.
+          </p>
         </div>
+
+        {badHabits.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#C9D2C2] bg-[#FFFDF8] p-6 text-sm text-[#737B70]">
+            No habits to break yet. You're ready whenever you are.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {badHabits.map((habit) => (
+              <div
+                key={habit.id}
+                className="flex items-center gap-4 rounded-2xl border border-[#E5E2D9] bg-[#FFFDF8] p-4"
+              >
+                <div
+                  className={
+                    habit.status === 'avoided'
+                      ? 'text-[#52664B]'
+                      : habit.status === 'occurred'
+                        ? 'text-[#9A5148]'
+                        : 'text-[#A5AD9D]'
+                  }
+                >
+                  {habit.status === 'avoided' ? (
+                    <CheckCircle2 size={23} />
+                  ) : habit.status === 'occurred' ? (
+                    <AlertCircle size={23} />
+                  ) : (
+                    <Circle size={23} />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{habit.name}</p>
+
+                  <p className="mt-1 text-sm text-[#737B70]">
+                    {habit.status === 'avoided'
+                      ? 'You avoided this habit today.'
+                      : habit.status === 'occurred'
+                        ? 'This habit occurred today. Tomorrow is another opportunity.'
+                        : "You haven’t checked in today."}
+                  </p>
+                </div>
+
+                <div className="hidden items-center gap-1 text-sm text-[#737B70] sm:flex">
+                  <span>🔥</span>
+                  <span>{habit.streak} days</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Personal space */}
@@ -208,34 +259,77 @@ function Overview({ habits }: { habits: Habit[] }) {
     </div>
   )
 }
+
 function App() {
-  const [habits, setHabits] = useState<Habit[]>(initialHabits)
+  const [habits, setHabits] = useState<Habit[]>([])
+  const [badHabits, setBadHabits] = useState<BadHabit[]>([])
+
+  useEffect(() => {
+    async function loadHabits() {
+      try {
+        const data = await getHabits()
+
+        setHabits(
+          data.map((habit) => ({
+            ...habit,
+            description: habit.description ?? '',
+          })),
+        )
+      } catch (error) {
+        console.error('Failed to load good habits:', error)
+      }
+    }
+
+    async function loadBadHabits() {
+      try {
+        const data = await getBadHabits()
+        setBadHabits(data)
+      } catch (error) {
+        console.error('Failed to load bad habits:', error)
+      }
+    }
+
+    loadHabits()
+    loadBadHabits()
+  }, [])
 
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Overview habits={habits} />} />
         <Route
-  path="/good-habits"
-  element={
-    <GoodHabits
-      habits={habits}
-      setHabits={setHabits}
-    />
-  }
-/>
+          path="/"
+          element={
+            <Overview
+              habits={habits}
+              badHabits={badHabits}
+            />
+          }
+        />
+
         <Route
-  path="/bad-habits"
-  element={<BadHabits />}
-/>
+          path="/good-habits"
+          element={
+            <GoodHabits
+              habits={habits}
+              setHabits={setHabits}
+            />
+          }
+        />
+
         <Route
-  path="/lists-notes"
-  element={<ListsNotes />}
-/>
+          path="/bad-habits"
+          element={<BadHabits />}
+        />
+
         <Route
-  path="/ai-assistant"
-  element={<AIAssistant />}
-/>
+          path="/lists-notes"
+          element={<ListsNotes />}
+        />
+
+        <Route
+          path="/ai-assistant"
+          element={<AIAssistant />}
+        />
       </Route>
     </Routes>
   )
