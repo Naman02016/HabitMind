@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Plus,
   Pencil,
@@ -10,18 +10,21 @@ import {
   ListTodo,
   StickyNote,
 } from 'lucide-react'
-
-type ListItem = {
-  id: number
-  text: string
-  completed: boolean
-}
-
-type CustomList = {
-  id: number
-  title: string
-  items: ListItem[]
-}
+import {
+  getLists,
+  createList,
+  updateList,
+  deleteList as deleteListRequest,
+  createItem,
+  updateItem,
+  deleteItem as deleteItemRequest,
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote as deleteNoteRequest,
+  type CustomList,
+  type Note as ApiNote,
+} from '../services/listNotesService'
 
 type Note = {
   id: number
@@ -30,11 +33,16 @@ type Note = {
   updatedAt: string
 }
 
+function formatUpdatedAt(value: string) {
+  return new Date(value).toLocaleDateString()
+}
+
 function ListsNotes() {
   const [activeTab, setActiveTab] = useState<'lists' | 'notes'>('lists')
 
   const [lists, setLists] = useState<CustomList[]>([])
   const [notes, setNotes] = useState<Note[]>([])
+  const [error, setError] = useState('')
 
   const [showListForm, setShowListForm] = useState(false)
   const [listTitle, setListTitle] = useState('')
@@ -48,28 +56,45 @@ function ListsNotes() {
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
 
-  function saveList(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!listTitle.trim()) return
-
-    if (editingListId !== null) {
-      setLists((current) =>
-        current.map((list) =>
-          list.id === editingListId
-            ? { ...list, title: listTitle.trim() }
-            : list,
-        ),
-      )
-    } else {
-      setLists((current) => [
-        ...current,
-        { id: Date.now(), title: listTitle.trim(), items: [] },
-      ])
+  async function loadData() {
+    try {
+      setError('')
+      const [loadedLists, loadedNotes] = await Promise.all([getLists(), getNotes()])
+      setLists(loadedLists)
+      setNotes(loadedNotes.map((note: ApiNote) => ({
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        updatedAt: formatUpdatedAt(note.updated_at),
+      })))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load lists and notes.')
     }
+  }
 
-    setListTitle('')
-    setEditingListId(null)
-    setShowListForm(false)
+  useEffect(() => {
+    void loadData()
+  }, [])
+
+  async function saveList(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const title = listTitle.trim()
+    if (!title) return
+
+    try {
+      setError('')
+      if (editingListId !== null) {
+        await updateList(editingListId, { title })
+      } else {
+        await createList({ title })
+      }
+      await loadData()
+      setListTitle('')
+      setEditingListId(null)
+      setShowListForm(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save list.')
+    }
   }
 
   function editList(list: CustomList) {
@@ -78,99 +103,83 @@ function ListsNotes() {
     setShowListForm(true)
   }
 
-  function deleteList(id: number) {
+  async function deleteList(id: number) {
     if (!window.confirm('Delete this list and all its items?')) return
-    setLists((current) => current.filter((list) => list.id !== id))
-  }
-
-  function addItem(event: React.FormEvent<HTMLFormElement>, listId: number) {
-    event.preventDefault()
-    if (!itemText.trim()) return
-
-    setLists((current) =>
-      current.map((list) =>
-        list.id === listId
-          ? {
-              ...list,
-              items: [
-                ...list.items,
-                {
-                  id: Date.now(),
-                  text: itemText.trim(),
-                  completed: false,
-                },
-              ],
-            }
-          : list,
-      ),
-    )
-
-    setItemText('')
-    setShowItemForm(null)
-  }
-
-  function toggleItem(listId: number, itemId: number) {
-    setLists((current) =>
-      current.map((list) =>
-        list.id === listId
-          ? {
-              ...list,
-              items: list.items.map((item) =>
-                item.id === itemId
-                  ? { ...item, completed: !item.completed }
-                  : item,
-              ),
-            }
-          : list,
-      ),
-    )
-  }
-
-  function deleteItem(listId: number, itemId: number) {
-    setLists((current) =>
-      current.map((list) =>
-        list.id === listId
-          ? {
-              ...list,
-              items: list.items.filter((item) => item.id !== itemId),
-            }
-          : list,
-      ),
-    )
-  }
-
-  function saveNote(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!noteTitle.trim() || !noteContent.trim()) return
-
-    const updatedAt = new Date().toLocaleDateString()
-
-    if (editingNoteId !== null) {
-      setNotes((current) =>
-        current.map((note) =>
-          note.id === editingNoteId
-            ? {
-                ...note,
-                title: noteTitle.trim(),
-                content: noteContent.trim(),
-                updatedAt,
-              }
-            : note,
-        ),
-      )
-    } else {
-      setNotes((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          title: noteTitle.trim(),
-          content: noteContent.trim(),
-          updatedAt,
-        },
-      ])
+    try {
+      setError('')
+      await deleteListRequest(id)
+      setLists((current) => current.filter((list) => list.id !== id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete list.')
     }
+  }
 
-    resetNoteForm()
+  async function addItem(event: React.FormEvent<HTMLFormElement>, listId: number) {
+    event.preventDefault()
+    const text = itemText.trim()
+    if (!text) return
+
+    try {
+      setError('')
+      await createItem(listId, { text })
+      await loadData()
+      setItemText('')
+      setShowItemForm(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add item.')
+    }
+  }
+
+  async function toggleItem(listId: number, itemId: number) {
+    const item = lists.find((list) => list.id === listId)?.items.find((entry) => entry.id === itemId)
+    if (!item) return
+    try {
+      setError('')
+      await updateItem(itemId, { completed: !item.completed })
+      setLists((current) => current.map((list) =>
+        list.id === listId
+          ? { ...list, items: list.items.map((entry) =>
+              entry.id === itemId ? { ...entry, completed: !entry.completed } : entry,
+            ) }
+          : list,
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update item.')
+    }
+  }
+
+  async function deleteItem(listId: number, itemId: number) {
+    try {
+      setError('')
+      await deleteItemRequest(itemId)
+      setLists((current) => current.map((list) =>
+        list.id === listId
+          ? { ...list, items: list.items.filter((item) => item.id !== itemId) }
+          : list,
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete item.')
+    }
+  }
+
+  async function saveNote(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const title = noteTitle.trim()
+    const content = noteContent.trim()
+    if (!title || !content) return
+
+    try {
+      setError('')
+      if (editingNoteId !== null) {
+        await updateNote(editingNoteId, { title, content })
+      } else {
+        await createNote({ title, content })
+      }
+      await loadData()
+      resetNoteForm()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save note.')
+    }
   }
 
   function resetNoteForm() {
@@ -187,13 +196,24 @@ function ListsNotes() {
     setShowNoteForm(true)
   }
 
-  function deleteNote(id: number) {
+  async function deleteNote(id: number) {
     if (!window.confirm('Are you sure you want to delete this note?')) return
-    setNotes((current) => current.filter((note) => note.id !== id))
+    try {
+      setError('')
+      await deleteNoteRequest(id)
+      setNotes((current) => current.filter((note) => note.id !== id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete note.')
+    }
   }
 
   return (
     <div className="mx-auto max-w-6xl p-5 md:p-9">
+      {error && (
+        <div role="alert" className="mb-5 rounded-xl border border-[#E5B9B2] bg-[#F7E8E5] px-4 py-3 text-sm text-[#9A5148]">
+          {error}
+        </div>
+      )}
       <section className="mb-8">
         <p className="mb-2 text-sm font-medium text-[#52664B]">
           YOUR PERSONAL SPACE
